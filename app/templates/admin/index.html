@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT HelpDesk — Консоль администратора</title>
+<style>
+  /* ── Palette ─────────────────────────────────────── */
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c6af7;
+    --green: #3ecf8e;
+    --orange: #f7934f;
+    --red: #f75f5f;
+    --yellow: #f7d94f;
+    --text: #e8eaf6;
+    --muted: #6b7280;
+    --font: 'JetBrains Mono', 'Fira Code', monospace;
+    --font2: 'Inter', system-ui, sans-serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font2);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── Sidebar ────────────────────────────────────── */
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+  }
+
+  .logo {
+    padding: 0 20px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .logo-title {
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,142,247,0.08); }
+  .nav-icon { font-size: 16px; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── Main ───────────────────────────────────────── */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar-title { font-size: 16px; font-weight: 600; }
+  .topbar-right { display: flex; gap: 12px; align-items: center; }
+  .btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger  { background: var(--red);    color: #fff; }
+  .btn-ghost   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+  .content { padding: 28px; flex: 1; }
+
+  /* ── Login Screen ───────────────────────────────── */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 44px;
+    width: 360px;
+  }
+  .login-logo { font-family: var(--font); font-size: 18px; color: var(--accent); margin-bottom: 4px; }
+  .login-sub  { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .field input {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 14px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .login-btn { width: 100%; margin-top: 8px; padding: 11px; font-size: 14px; }
+  .login-error { color: var(--red); font-size: 13px; margin-top: 12px; display: none; }
+
+  /* ── Stats ──────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .stat-value { font-family: var(--font); font-size: 28px; font-weight: 600; }
+  .stat-value.blue   { color: var(--accent); }
+  .stat-value.green  { color: var(--green); }
+  .stat-value.orange { color: var(--orange); }
+  .stat-value.red    { color: var(--red); }
+  .stat-value.purple { color: var(--accent2); }
+
+  /* ── Table ──────────────────────────────────────── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 16px;
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-new       { background: rgba(79,142,247,0.15);  color: var(--accent); }
+  .badge-progress  { background: rgba(124,106,247,0.15); color: var(--accent2); }
+  .badge-waiting   { background: rgba(247,217,79,0.15);  color: var(--yellow); }
+  .badge-closed    { background: rgba(62,207,142,0.15);  color: var(--green); }
+  .badge-escalated { background: rgba(247,95,95,0.15);   color: var(--red); }
+
+  .priority-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 6px;
+  }
+  .p-low      { background: var(--green); }
+  .p-normal   { background: var(--accent); }
+  .p-high     { background: var(--orange); }
+  .p-critical { background: var(--red); }
+
+  /* ── Modal ──────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .modal-field select, .modal-field input {
+    width: 100%; padding: 9px 11px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 14px;
+    outline: none;
+  }
+
+  /* ── Section Titles ─────────────────────────────── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── Toasts ─────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    font-size: 13px; z-index: 999;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚙ IT HelpDesk</div>
+    <div class="login-sub">Панель администратора</div>
+    <div class="field">
+      <label>Telegram ID</label>
+      <input type="number" id="login-id" placeholder="123456789">
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="login-pass" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-error" id="login-error">Неверные данные</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-title">IT HelpDesk</div>
+    <div class="logo-sub">Панель управления</div>
+  </div>
+  <div class="nav-item active" onclick="showSection('dashboard')">
+    <span class="nav-icon">📊</span> Дашборд
+  </div>
+  <div class="nav-item" onclick="showSection('tickets')">
+    <span class="nav-icon">📋</span> Заявки
+  </div>
+  <div class="nav-item" onclick="showSection('users')">
+    <span class="nav-icon">👥</span> Сотрудники
+  </div>
+  <div class="nav-item" onclick="showSection('routes')">
+    <span class="nav-icon">🔀</span> Маршруты
+  </div>
+  <div class="sidebar-footer" id="admin-info">Загрузка...</div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="section-title">Дашборд</span>
+    <div class="topbar-right">
+      <span id="topbar-date" style="font-size:12px;color:var(--muted)"></span>
+      <button class="btn btn-ghost" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="section-dashboard">
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-label">Всего заявок</div><div class="stat-value blue" id="s-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Новые</div><div class="stat-value purple" id="s-new">—</div></div>
+        <div class="stat-card"><div class="stat-label">В работе</div><div class="stat-value orange" id="s-prog">—</div></div>
+        <div class="stat-card"><div class="stat-label">Ожидают инфо</div><div class="stat-value yellow" id="s-wait" style="color:var(--yellow)">—</div></div>
+        <div class="stat-card"><div class="stat-label">Закрыты</div><div class="stat-value green" id="s-closed">—</div></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header" style="font-weight:600;font-size:14px;">Последние заявки</div>
+        <table><thead><tr>
+          <th>#</th><th>Тема</th><th>Статус</th><th>Приоритет</th><th>Создана</th>
+        </tr></thead>
+        <tbody id="dash-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TICKETS -->
+    <div class="section" id="section-tickets">
+      <div class="table-wrap">
+        <div class="table-header">
+          <select class="filter-select" id="f-status" onchange="loadTickets()">
+            <option value="">Все статусы</option>
+            <option value="new">Новые</option>
+            <option value="in_progress">В работе</option>
+            <option value="waiting_info">Ожидают инфо</option>
+            <option value="escalated">Эскалированы</option>
+            <option value="closed">Закрытые</option>
+          </select>
+          <select class="filter-select" id="f-priority" onchange="loadTickets()">
+            <option value="">Все приоритеты</option>
+            <option value="critical">Критический</option>
+            <option value="high">Высокий</option>
+            <option value="normal">Обычный</option>
+            <option value="low">Низкий</option>
+          </select>
+        </div>
+        <table><thead><tr>
+          <th>#</th><th>Тема</th><th>Статус</th><th>Приоритет</th><th>Сценарий</th><th>Создана</th><th></th>
+        </tr></thead>
+        <tbody id="tickets-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="section" id="section-users">
+      <div class="table-wrap">
+        <div class="table-header" style="font-weight:600;font-size:14px;">Все пользователи</div>
+        <table><thead><tr>
+          <th>Имя</th><th>Отдел</th><th>Telegram ID</th><th>Роль</th><th>Статус</th><th></th>
+        </tr></thead>
+        <tbody id="users-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROUTES -->
+    <div class="section" id="section-routes">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span style="font-weight:600;font-size:14px;flex:1">Сценарии маршрутизации</span>
+        </div>
+        <table><thead><tr>
+          <th>Ключ</th><th>Название</th><th>Описание</th><th>Активен</th>
+        </tr></thead>
+        <tbody id="routes-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- TICKET EDIT MODAL -->
+<div class="modal-overlay" id="ticket-modal">
+  <div class="modal">
+    <div class="modal-title">✏️ Редактирование заявки <span id="modal-ticket-id"></span></div>
+    <div class="modal-field">
+      <label>Статус</label>
+      <select id="m-status">
+        <option value="new">Новая</option>
+        <option value="in_progress">В работе</option>
+        <option value="waiting_info">Ожидает информации</option>
+        <option value="escalated">Эскалирована</option>
+        <option value="closed">Закрыта</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Приоритет</label>
+      <select id="m-priority">
+        <option value="low">Низкий</option>
+        <option value="normal">Обычный</option>
+        <option value="high">Высокий</option>
+        <option value="critical">Критический</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Telegram ID нового исполнителя (оставьте пустым)</label>
+      <input type="number" id="m-assignee" placeholder="123456789">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveTicket()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER ROLE MODAL -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal">
+    <div class="modal-title">👤 Изменить роль: <span id="modal-user-name"></span></div>
+    <div class="modal-field">
+      <label>Роль</label>
+      <select id="m-role">
+        <option value="user">Пользователь</option>
+        <option value="executor">Исполнитель (ИТ)</option>
+        <option value="admin">Администратор</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveUser()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const BASE = '';
+let TOKEN = localStorage.getItem('hd_token') || '';
+let editingTicketId = null;
+let editingUserId = null;
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const id   = document.getElementById('login-id').value;
+  const pass = document.getElementById('login-pass').value;
+  const form = new URLSearchParams({ username: id, password: pass });
+  const res  = await fetch('/api/auth/token', { method:'POST', body: form });
+  if (!res.ok) {
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  const data = await res.json();
+  TOKEN = data.access_token;
+  localStorage.setItem('hd_token', TOKEN);
+  document.getElementById('login-screen').style.display = 'none';
+  init();
+}
+
+function doLogout() {
+  localStorage.removeItem('hd_token');
+  location.reload();
+}
+
+function headers() {
+  return { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' };
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  if (!TOKEN) return;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('topbar-date').textContent = new Date().toLocaleString('ru');
+  loadDashboard();
+  setInterval(loadDashboard, 30000);
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const sectionTitles = {
+  dashboard: 'Дашборд', tickets: 'Заявки',
+  users: 'Сотрудники', routes: 'Маршруты'
+};
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  document.getElementById('section-title').textContent = sectionTitles[name];
+  if (name === 'tickets') loadTickets();
+  if (name === 'users') loadUsers();
+  if (name === 'routes') loadRoutes();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const tickets = await apiFetch('/api/tickets/?limit=200');
+  if (!tickets) return;
+
+  const counts = { new:0, in_progress:0, waiting_info:0, closed:0, escalated:0 };
+  tickets.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+
+  document.getElementById('s-total').textContent  = tickets.length;
+  document.getElementById('s-new').textContent    = counts.new;
+  document.getElementById('s-prog').textContent   = counts.in_progress;
+  document.getElementById('s-wait').textContent   = counts.waiting_info;
+  document.getElementById('s-closed').textContent = counts.closed;
+
+  const recent = tickets.slice(0, 8);
+  document.getElementById('dash-table').innerHTML = recent.map(t => `
+    <tr>
+      <td style="font-family:monospace;color:var(--muted)">#${t.id}</td>
+      <td>${esc(t.title)}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${priorityBadge(t.priority)}</td>
+      <td style="color:var(--muted);font-size:12px">${fmtDate(t.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Tickets ───────────────────────────────────────────────────────────────────
+async function loadTickets() {
+  const status   = document.getElementById('f-status').value;
+  const priority = document.getElementById('f-priority').value;
+  let url = '/api/tickets/?limit=100';
+  if (status)   url += '&status='   + status;
+  if (priority) url += '&priority=' + priority;
+
+  const tickets = await apiFetch(url);
+  if (!tickets) return;
+
+  document.getElementById('tickets-table').innerHTML = tickets.map(t => `
+    <tr>
+      <td style="font-family:monospace;color:var(--muted)">#${t.id}</td>
+      <td>${esc(t.title)}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${priorityBadge(t.priority)}</td>
+      <td><span style="font-family:monospace;font-size:12px;color:var(--muted)">${t.scenario_key||'—'}</span></td>
+      <td style="color:var(--muted);font-size:12px">${fmtDate(t.created_at)}</td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="openTicketModal(${t.id},'${t.status}','${t.priority}')">✏️</button></td>
+    </tr>
+  `).join('');
+}
+
+function openTicketModal(id, status, priority) {
+  editingTicketId = id;
+  document.getElementById('modal-ticket-id').textContent = '#' + id;
+  document.getElementById('m-status').value   = status;
+  document.getElementById('m-priority').value = priority;
+  document.getElementById('m-assignee').value = '';
+  document.getElementById('ticket-modal').classList.add('open');
+}
+
+async function saveTicket() {
+  const body = {
+    status:   document.getElementById('m-status').value,
+    priority: document.getElementById('m-priority').value,
+  };
+  const assignee = document.getElementById('m-assignee').value;
+  if (assignee) body.assignee_telegram_id = parseInt(assignee);
+
+  const res = await fetch(`/api/tickets/${editingTicketId}`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify(body)
+  });
+  if (res.ok) { toast('✅ Заявка обновлена'); closeModal(); loadTickets(); }
+  else toast('❌ Ошибка: ' + (await res.json()).detail, true);
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const users = await apiFetch('/api/users/');
+  if (!users) return;
+  const roleIcons = { admin:'👑', executor:'🔧', user:'👤' };
+  document.getElementById('users-table').innerHTML = users.map(u => `
+    <tr>
+      <td>${esc(u.full_name)}</td>
+      <td style="color:var(--muted)">${esc(u.department||'—')}</td>
+      <td><code style="font-size:12px;color:var(--accent)">${u.telegram_id}</code></td>
+      <td>${roleIcons[u.role]||'👤'} ${u.role}</td>
+      <td>${u.is_active ? '<span style="color:var(--green)">●</span> Активен' : '<span style="color:var(--red)">●</span> Отключён'}</td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="openUserModal(${u.id},'${u.full_name}','${u.role}')">✏️</button></td>
+    </tr>
+  `).join('');
+}
+
+function openUserModal(id, name, role) {
+  editingUserId = id;
+  document.getElementById('modal-user-name').textContent = name;
+  document.getElementById('m-role').value = role;
+  document.getElementById('user-modal').classList.add('open');
+}
+
+async function saveUser() {
+  const body = { role: document.getElementById('m-role').value };
+  const res = await fetch(`/api/users/${editingUserId}`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify(body)
+  });
+  if (res.ok) { toast('✅ Роль обновлена'); closeModal(); loadUsers(); }
+  else toast('❌ Ошибка', true);
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+async function loadRoutes() {
+  const routes = await apiFetch('/api/routes/');
+  if (!routes) return;
+  document.getElementById('routes-table').innerHTML = routes.map(r => `
+    <tr>
+      <td><code style="color:var(--accent);font-size:13px">${r.key}</code></td>
+      <td>${esc(r.name)}</td>
+      <td style="color:var(--muted);font-size:13px">${esc(r.description||'—')}</td>
+      <td>${r.is_active ? '<span style="color:var(--green)">✓ Да</span>' : '<span style="color:var(--red)">✗ Нет</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function closeModal() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+}
+
+async function apiFetch(url) {
+  const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+  if (res.status === 401) { doLogout(); return null; }
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+function statusBadge(s) {
+  const map = {
+    new:        ['badge-new',      '🆕 Новая'],
+    in_progress:['badge-progress', '⚙️ В работе'],
+    waiting_info:['badge-waiting', '❓ Ожидает'],
+    closed:     ['badge-closed',   '✅ Закрыта'],
+    escalated:  ['badge-escalated','⬆️ Эскал.'],
+  };
+  const [cls, label] = map[s] || ['badge-new', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function priorityBadge(p) {
+  const dots = { low:'p-low', normal:'p-normal', high:'p-high', critical:'p-critical' };
+  const labels = { low:'Низкий', normal:'Обычный', high:'Высокий', critical:'Критический' };
+  return `<span class="priority-dot ${dots[p]||''}"></span>${labels[p]||p}`;
+}
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleString('ru', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let toastTimer;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = err ? 'var(--red)' : 'var(--green)';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+if (TOKEN) init();
+</script>
+</body>
+</html>
